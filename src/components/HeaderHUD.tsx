@@ -1,5 +1,5 @@
 import React from 'react';
-import { Volume2, VolumeX, BookOpen, RotateCcw, Eye, Shield, Compass } from 'lucide-react';
+import { Volume2, VolumeX, BookOpen, RotateCcw, Eye, Shield, Compass, ZoomIn, ZoomOut } from 'lucide-react';
 import { GameState } from '../engine/types.ts';
 
 interface HeaderHUDProps {
@@ -8,6 +8,8 @@ interface HeaderHUDProps {
   cameraPreset: 'iso' | 'top' | 'hero' | 'cinematic';
   onToggleMute: () => void;
   onSelectCamera: (preset: 'iso' | 'top' | 'hero' | 'cinematic') => void;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
   onOpenTutorial: () => void;
   onRestart: () => void;
 }
@@ -18,6 +20,8 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
   cameraPreset,
   onToggleMute,
   onSelectCamera,
+  onZoomIn,
+  onZoomOut,
   onOpenTutorial,
   onRestart,
 }) => {
@@ -99,8 +103,26 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
         </div>
       </div>
 
-      {/* Right: Controls & Cameras */}
+      {/* Right: Camera Views, Zoom Controls & Audio */}
       <div className="pointer-events-auto flex items-center gap-1.5 bg-stone-900/85 backdrop-blur-md p-1.5 rounded-2xl border border-amber-900/50 shadow-2xl">
+        {/* Zoom Controls */}
+        <button
+          onClick={onZoomIn}
+          className="p-2 rounded-xl text-stone-300 hover:text-amber-300 hover:bg-stone-800 transition"
+          title="Zoom In (or scroll wheel)"
+        >
+          <ZoomIn className="w-4 h-4" />
+        </button>
+        <button
+          onClick={onZoomOut}
+          className="p-2 rounded-xl text-stone-300 hover:text-amber-300 hover:bg-stone-800 transition"
+          title="Zoom Out (or scroll wheel)"
+        >
+          <ZoomOut className="w-4 h-4" />
+        </button>
+
+        <div className="w-px h-5 bg-stone-700 mx-0.5" />
+
         {/* Camera Views */}
         <button
           onClick={() => onSelectCamera('iso')}
@@ -130,7 +152,7 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
           <Shield className="w-4 h-4" />
         </button>
 
-        <div className="w-px h-5 bg-stone-700 mx-1" />
+        <div className="w-px h-5 bg-stone-700 mx-0.5" />
 
         {/* Audio Mute */}
         <button

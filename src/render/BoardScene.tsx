@@ -1,10 +1,12 @@
 import React, { useRef, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import * as THREE from 'three';
 import { GameState, Rotation } from '../engine/types.ts';
 import { TileDiorama } from './tiles/TileDiorama.tsx';
 import { FollowerMesh } from './FollowerMesh.tsx';
+import { getWoodGrainTexture } from './materials/textures.ts';
 
 interface BoardSceneProps {
   state: GameState;
@@ -13,6 +15,7 @@ interface BoardSceneProps {
   legalPlacements: { x: number; y: number; rotation: Rotation }[];
   onSelectCoord: (coord: { x: number; y: number }) => void;
   cameraPreset?: 'iso' | 'top' | 'hero' | 'cinematic';
+  zoomTrigger?: number; // increments to trigger zoom in/out
 }
 
 export const BoardScene: React.FC<BoardSceneProps> = ({
@@ -22,8 +25,10 @@ export const BoardScene: React.FC<BoardSceneProps> = ({
   legalPlacements,
   onSelectCoord,
   cameraPreset = 'iso',
+  zoomTrigger = 0,
 }) => {
-  // Extract unique (x, y) coordinates from legal placements
+  const controlsRef = useRef<OrbitControlsImpl>(null);
+
   const uniqueCandidateCoords = useMemo(() => {
     const map = new Map<string, { x: number; y: number }>();
     legalPlacements.forEach((p) => {
@@ -40,38 +45,45 @@ export const BoardScene: React.FC<BoardSceneProps> = ({
     <div className="w-full h-full relative select-none">
       <Canvas
         shadows
-        camera={{ position: [0, 8, 8], fov: 42 }}
+        camera={{ position: [0, 6.5, 7.5], fov: 40 }}
         className="w-full h-full bg-[#120f0d]"
+        gl={{ antialias: true, alpha: false, powerPreference: 'high-performance' }}
       >
-        <CameraController preset={cameraPreset} />
+        <CameraController preset={cameraPreset} zoomTrigger={zoomTrigger} controlsRef={controlsRef} />
 
-        {/* Ambient & Directional Lighting */}
-        <ambientLight intensity={0.55} color="#dbeafe" />
+        {/* Ambient & Directional Sun Lighting with Warm Medieval Tone */}
+        <ambientLight intensity={0.65} color="#e2e8f0" />
         <directionalLight
-          position={[10, 16, 8]}
-          intensity={1.4}
+          position={[12, 18, 10]}
+          intensity={1.5}
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
           shadow-bias={-0.0001}
-          color="#fffbeb"
+          shadow-camera-near={0.5}
+          shadow-camera-far={45}
+          shadow-camera-left={-12}
+          shadow-camera-right={12}
+          shadow-camera-top={12}
+          shadow-camera-bottom={-12}
+          color="#fff8ed"
         />
         {/* Soft Warm Rim Light */}
         <directionalLight
-          position={[-10, 8, -10]}
-          intensity={0.4}
+          position={[-12, 9, -10]}
+          intensity={0.45}
           color="#fed7aa"
         />
 
-        {/* Medieval Table Surface */}
+        {/* Rich Walnut Tabletop Surface */}
         <TableSurface />
 
-        {/* Placed Diorama Tiles */}
+        {/* Realistic Placed Diorama Tiles */}
         {placedTiles.map((tile) => (
           <TileDiorama key={tile.instanceId} tile={tile} />
         ))}
 
-        {/* Placed Followers */}
+        {/* Sculpted Medieval Follower Figurines */}
         {state.followers.map((f) => {
           const tile = state.board.get(`${f.x},${f.y}`);
           if (!tile) return null;
@@ -114,13 +126,17 @@ export const BoardScene: React.FC<BoardSceneProps> = ({
             />
           )}
 
+        {/* Smooth OrbitControls with Macro Zoom Inspection */}
         <OrbitControls
+          ref={controlsRef}
           makeDefault
           enableDamping
-          dampingFactor={0.08}
-          minDistance={3}
-          maxDistance={35}
-          maxPolarAngle={Math.PI / 2.12}
+          dampingFactor={0.06}
+          enableZoom={true}
+          zoomSpeed={1.25}
+          minDistance={0.8}
+          maxDistance={30}
+          maxPolarAngle={Math.PI / 2.14}
         />
       </Canvas>
     </div>
@@ -128,27 +144,29 @@ export const BoardScene: React.FC<BoardSceneProps> = ({
 };
 
 // ----------------------------------------------------
-// Wooden Gaming Table
+// Rich Walnut Table Surface with Concentric Inlay
 // ----------------------------------------------------
 const TableSurface: React.FC = () => {
+  const tableWoodTex = useMemo(() => getWoodGrainTexture(true), []);
+
   return (
     <group position={[0, -0.06, 0]}>
-      {/* Wood Slab Base */}
-      <mesh receiveShadow position={[0, -0.2, 0]}>
-        <cylinderGeometry args={[22, 22, 0.4, 48]} />
+      {/* Heavy Timber Gaming Table Slab */}
+      <mesh receiveShadow position={[0, -0.25, 0]}>
+        <cylinderGeometry args={[24, 24, 0.5, 48]} />
         <meshStandardMaterial
-          color="#1e1713"
-          roughness={0.88}
-          metalness={0.05}
+          map={tableWoodTex}
+          roughness={0.7}
+          metalness={0.08}
         />
       </mesh>
-      {/* Table Ring Inlay */}
+      {/* Gilded Brass Ring Inlay */}
       <mesh receiveShadow position={[0, 0.005, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[12, 12.06, 64]} />
+        <ringGeometry args={[11, 11.08, 64]} />
         <meshStandardMaterial
-          color="#854d0e"
-          roughness={0.5}
-          metalness={0.4}
+          color="#fbbf24"
+          roughness={0.35}
+          metalness={0.65}
         />
       </mesh>
     </group>
@@ -170,9 +188,8 @@ const CandidateMarker: React.FC<{
 
   useFrame((state) => {
     if (meshRef.current) {
-      // Gentle floating pulsing animation
       const t = state.clock.getElapsedTime();
-      meshRef.current.position.y = 0.04 + Math.sin(t * 3 + x + y) * 0.015;
+      meshRef.current.position.y = 0.04 + Math.sin(t * 3.5 + x + y) * 0.015;
     }
   });
 
@@ -187,26 +204,26 @@ const CandidateMarker: React.FC<{
         position={[0, 0.04, 0]}
         receiveShadow
       >
-        <boxGeometry args={[0.88, 0.02, 0.88]} />
+        <boxGeometry args={[0.9, 0.02, 0.9]} />
         <meshStandardMaterial
           color={isSelected ? '#f59e0b' : '#38bdf8'}
           emissive={isSelected ? '#d97706' : '#0284c7'}
-          emissiveIntensity={isSelected ? 0.6 : 0.3}
+          emissiveIntensity={isSelected ? 0.7 : 0.35}
           transparent
-          opacity={0.65}
+          opacity={0.7}
           roughness={0.3}
         />
       </mesh>
-      {/* Pulsing ring indicator */}
+      {/* Golden Rune Ring */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0.05, 0]}
+        position={[0, 0.052, 0]}
       >
-        <ringGeometry args={[0.3, 0.36, 24]} />
+        <ringGeometry args={[0.3, 0.38, 24]} />
         <meshBasicMaterial
           color={isSelected ? '#fbbf24' : '#7dd3fc'}
           transparent
-          opacity={0.8}
+          opacity={0.85}
         />
       </mesh>
     </group>
@@ -214,36 +231,61 @@ const CandidateMarker: React.FC<{
 };
 
 // ----------------------------------------------------
-// Camera Viewpoint Controller
+// Camera Viewpoint Controller with Zoom Trigger Support
 // ----------------------------------------------------
 const CameraController: React.FC<{
   preset: 'iso' | 'top' | 'hero' | 'cinematic';
-}> = ({ preset }) => {
+  zoomTrigger: number;
+  controlsRef: React.RefObject<OrbitControlsImpl>;
+}> = ({ preset, zoomTrigger, controlsRef }) => {
   const angleRef = useRef(0);
+  const { camera } = useThree();
+  const lastPresetRef = useRef(preset);
+  const lastZoomRef = useRef(zoomTrigger);
 
-  useFrame((state, delta) => {
-    const camera = state.camera;
+  // Handle on-screen zoom delta triggers
+  useFrame((_, delta) => {
+    if (controlsRef.current && zoomTrigger !== lastZoomRef.current) {
+      const diff = zoomTrigger - lastZoomRef.current;
+      lastZoomRef.current = zoomTrigger;
+
+      // Adjust camera distance towards/away from target
+      const target = controlsRef.current.target;
+      const dir = camera.position.clone().sub(target);
+      const factor = diff > 0 ? 0.8 : 1.25; // zoom in or out
+      const newPos = target.clone().add(dir.multiplyScalar(factor));
+
+      const dist = newPos.distanceTo(target);
+      if (dist >= 0.8 && dist <= 30) {
+        camera.position.copy(newPos);
+        controlsRef.current.update();
+      }
+    }
 
     if (preset === 'cinematic') {
-      angleRef.current += delta * 0.25;
-      const r = 10;
+      angleRef.current += delta * 0.22;
+      const r = 9;
       camera.position.x = Math.sin(angleRef.current) * r;
       camera.position.z = Math.cos(angleRef.current) * r;
-      camera.position.y = 6;
+      camera.position.y = 5.2;
       camera.lookAt(0, 0, 0);
       return;
     }
 
-    let targetPos = new THREE.Vector3(0, 8, 8);
-    if (preset === 'top') {
-      targetPos = new THREE.Vector3(0, 13, 0.01);
-    } else if (preset === 'hero') {
-      targetPos = new THREE.Vector3(0, 3.2, 5.5);
-    } else if (preset === 'iso') {
-      targetPos = new THREE.Vector3(6, 7, 7);
+    // Smooth transition when preset changes
+    if (preset !== lastPresetRef.current) {
+      lastPresetRef.current = preset;
+      let targetPos = new THREE.Vector3(5.5, 6.5, 6.5);
+      if (preset === 'top') {
+        targetPos = new THREE.Vector3(0, 11, 0.01);
+      } else if (preset === 'hero') {
+        targetPos = new THREE.Vector3(0, 2.2, 3.8);
+      } else if (preset === 'iso') {
+        targetPos = new THREE.Vector3(5.5, 6.5, 6.5);
+      }
+      camera.position.lerp(targetPos, 0.08);
+      if (controlsRef.current) controlsRef.current.target.set(0, 0, 0);
     }
-
-    camera.position.lerp(targetPos, 0.05);
   });
 
   return null;

@@ -57,7 +57,7 @@ export const TileDrawTray: React.FC<TileDrawTrayProps> = ({
             <div className="text-xs text-stone-400">
               {selectedCoord
                 ? `Selected Target: (${selectedCoord.x}, ${selectedCoord.y})`
-                : 'Click any blue rune pad on table'}
+                : 'Click any blue rune pad on table · Scroll to zoom'}
             </div>
           </div>
         </div>

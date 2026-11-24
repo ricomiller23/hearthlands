@@ -41,6 +41,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [isMuted, setIsMuted] = useState(soundManager.getMuted());
   const [showTutorial, setShowTutorial] = useState(false);
   const [isPhotoMode, setIsPhotoMode] = useState(false);
+  const [zoomTrigger, setZoomTrigger] = useState(0);
+
+  const handleZoomIn = useCallback(() => {
+    setZoomTrigger((z) => z + 1);
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoomTrigger((z) => z - 1);
+  }, []);
 
   // Compute legal placement options for the current tile
   const legalPlacements = useMemo(() => {
@@ -157,6 +166,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'r' || e.key === 'R') {
         handleRotate();
+      } else if (e.key === '+' || e.key === '=') {
+        handleZoomIn();
+      } else if (e.key === '-' || e.key === '_') {
+        handleZoomOut();
       } else if (e.key === 'Enter') {
         if (isLegalSelection) handleConfirmPlacement();
       }
@@ -241,6 +254,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         legalPlacements={legalPlacements}
         onSelectCoord={handleSelectCoord}
         cameraPreset={isPhotoMode ? 'cinematic' : cameraPreset}
+        zoomTrigger={zoomTrigger}
       />
 
       {/* Top HUD */}
@@ -252,6 +266,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           onToggleMute={handleToggleMute}
           onSelectCamera={setCameraPreset}
           onOpenTutorial={() => setShowTutorial(true)}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
           onRestart={handleRestart}
         />
       )}

@@ -52,28 +52,38 @@ async function run() {
   await page.waitForTimeout(2000); // allow Three.js canvas to initialize and render
   await page.screenshot({ path: path.join(SCREENSHOTS_DIR, "03-board-diorama.png") });
 
-  // 4. Rotate tile with hotkey 'R'
-  console.log("Rotating tile...");
-  await page.keyboard.press("r");
-  await page.waitForTimeout(500);
-  await page.screenshot({ path: path.join(SCREENSHOTS_DIR, "04-tile-rotated.png") });
-
-  // 5. Switch to Top-Down view
-  console.log("Switching to Top-Down view...");
-  const topDownBtn = await page.getByTitle(/Top-Down Plan View/i);
-  if (topDownBtn) {
-    await topDownBtn.click();
-    await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, "05-topdown-view.png") });
+  // 4. Test Scroll / Zoom In on Pieces
+  console.log("Testing zoom in with wheel and button...");
+  // Use mouse wheel over canvas center to zoom in close
+  await page.mouse.move(640, 400);
+  await page.mouse.wheel(0, -600); // wheel scroll zoom in
+  await page.waitForTimeout(1000);
+  // Also click Zoom In button
+  const zoomInBtn = await page.getByTitle(/Zoom In/i);
+  if (zoomInBtn) {
+    await zoomInBtn.click();
+    await page.waitForTimeout(500);
+    await zoomInBtn.click();
+    await page.waitForTimeout(800);
   }
+  await page.screenshot({ path: path.join(SCREENSHOTS_DIR, "04-zoomed-in-macro.png") });
 
-  // 6. Switch to Hero view
+  // 5. Switch to Low Hero view
   console.log("Switching to Hero view...");
   const heroBtn = await page.getByTitle(/Low Hero Diorama View/i);
   if (heroBtn) {
     await heroBtn.click();
     await page.waitForTimeout(1000);
-    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, "06-hero-view.png") });
+    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, "05-hero-view.png") });
+  }
+
+  // 6. Switch to Top-Down view
+  console.log("Switching to Top-Down view...");
+  const topDownBtn = await page.getByTitle(/Top-Down Plan View/i);
+  if (topDownBtn) {
+    await topDownBtn.click();
+    await page.waitForTimeout(1000);
+    await page.screenshot({ path: path.join(SCREENSHOTS_DIR, "06-topdown-view.png") });
   }
 
   // 7. Mobile Viewport 390x844
